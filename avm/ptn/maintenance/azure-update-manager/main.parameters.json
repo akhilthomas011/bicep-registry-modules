@@ -1,0 +1,40 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": ""
+    },
+    "maintenanceConfigurationsResourceGroupName": {
+      "value": ""
+    },
+    "maintenanceConfigurations": {
+      "value": [
+        {
+          "maintenanceConfigName": "string",
+          "maintenanceSchedule": {
+            "startTime": "string",
+            "duration": "string",
+            "maintenanceScope": "string",
+            "maintenanceWindow": {
+              "startTime": "string",
+              "duration": "string"
+            }
+          }
+        },
+        {
+          "maintenanceConfigName": "string",
+          "maintenanceConfigLocation": "string",
+          "maintenanceSchedule": {
+            "startTime": "string",
+            "duration": "string",
+            "maintenanceWindow": {
+              "startTime": "string",
+              "duration": "string"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,158 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "maintenanceConfigName": {
+            "type": "string",
+            "metadata": {
+                "description": "This is name of the maintenance config being created."
+            }
+        },
+        "maintenanceConfigLocation": {
+            "type": "string",
+            "metadata": {
+                "description": "This is location of the maintenance config being created."
+            }
+        },
+        "maintenanceSchedule": {
+            "type": "object",
+            "metadata": {
+                "description": "This is schedule information associated with the Maintenance configuration."
+            }
+        },
+        "maintenanceScope": {
+            "type": "string",
+            "metadata": {
+                "description": "Gets or sets maintenanceScope of the configuration."
+            }
+        }
+    },
+    "resources": [
+        {
+            "apiVersion": "2023-04-01",
+            "type": "Microsoft.Maintenance/maintenanceConfigurations",
+            "name": "[parameters('maintenanceConfigName')]",
+            "location": "[parameters('maintenanceConfigLocation')]",
+            "tags": {},
+            "properties": {
+                "maintenanceScope": "InGuestPatch",
+                "installPatches": {
+                    "linuxParameters": {
+                        "classificationsToInclude": [
+                            "Critical",
+                            "Security"
+                        ],
+                        "packageNameMasksToExclude": null,
+                        "packageNameMasksToInclude": null
+                    },
+                    "windowsParameters": {
+                        "classificationsToInclude": [
+                            "Critical",
+                            "Security"
+                        ],
+                        "kbNumbersToExclude": null,
+                        "kbNumbersToInclude": null
+                    },
+                    "rebootSetting": "RebootIfRequired"
+                },
+                "extensionProperties": {
+                    "InGuestPatchMode": "User"
+                },
+                "maintenanceWindow": {
+                    "startDateTime": "2024-09-19 00:00",
+                    "duration": "03:55",
+                    "timeZone": "India Standard Time",
+                    "expirationDateTime": null,
+                    "recurEvery": "1Day"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2019-08-01",
+            "name": "[uniqueString('rg-dge-access-prod-uaen-01rggdfg361e9bb5-a5de-4ac8-8d6f-4f0349859032')]",
+            "resourceGroup": "rg-dge-access-prod-uaen-01",
+            "subscriptionId": "361e9bb5-a5de-4ac8-8d6f-4f0349859032",
+            "dependsOn": [
+                "[concat('Microsoft.Maintenance/maintenanceConfigurations/', parameters('maintenanceConfigName'))]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "template": {
+                    "$schema": "http://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {},
+                    "resources": [
+                        {
+                            "apiVersion": "2023-04-01",
+                            "type": "Microsoft.Maintenance/configurationAssignments",
+                            "name": "rggdfgAssignment",
+                            "location": "uaenorth",
+                            "scope": "Microsoft.Compute/virtualMachines/vm-dge-prod-access-uaen-01",
+                            "tags": {},
+                            "properties": {
+                                "maintenanceConfigurationId": "/subscriptions/361e9bb5-a5de-4ac8-8d6f-4f0349859032/resourceGroups/rg-dge-access-prod-uaen-01/providers/Microsoft.Maintenance/maintenanceConfigurations/rggdfg"
+                            }
+                        }
+                    ]
+                },
+                "parameters": {}
+            },
+            "tags": {}
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2019-08-01",
+            "name": "[uniqueString('Scope_361e9bb5-a5de-4ac8-8d6f-4f0349859032_rggdfg')]",
+            "subscriptionId": "361e9bb5-a5de-4ac8-8d6f-4f0349859032",
+            "location": "eastus",
+            "dependsOn": [
+                "[concat('Microsoft.Maintenance/maintenanceConfigurations/', parameters('maintenanceConfigName'))]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "template": {
+                    "$schema": "http://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {},
+                    "resources": [
+                        {
+                            "apiVersion": "2023-04-01",
+                            "type": "Microsoft.Maintenance/configurationAssignments",
+                            "name": "rggdfgDynamicAssignment1",
+                            "properties": {
+                                "maintenanceConfigurationId": "/subscriptions/361e9bb5-a5de-4ac8-8d6f-4f0349859032/resourceGroups/rg-dge-access-prod-uaen-01/providers/Microsoft.Maintenance/maintenanceConfigurations/rggdfg",
+                                "filter": {
+                                    "resourceTypes": [
+                                        "microsoft.compute/virtualmachines",
+                                        "microsoft.hybridcompute/machines"
+                                    ],
+                                    "resourceGroups": [
+                                        "rg-dge-access-prod-uaen-01"
+                                    ],
+                                    "osTypes": [
+                                        "Linux",
+                                        "Windows"
+                                    ],
+                                    "locations": [
+                                        "uaenorth"
+                                    ],
+                                    "tagSettings": {
+                                        "filterOperator": "All",
+                                        "tags": {
+                                            "maintenance ring": [
+                                                "1"
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                },
+                "parameters": {}
+            },
+            "tags": {}
+        }
+    ]
+}
