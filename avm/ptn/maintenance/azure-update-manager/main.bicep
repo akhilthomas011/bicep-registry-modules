@@ -66,6 +66,39 @@ module maintenance_configuration 'br/public:avm/res/maintenance/maintenance-conf
   }
 ]
 
+resource resourceRoleAssignment 'Microsoft.Resources/deployments@2023-07-01' = {
+  name: '${guid(resourceId, principalId, roleDefinitionId)}-ResourceRoleAssignment'
+  properties: {
+    mode: 'Incremental'
+    expressionEvaluationOptions: {
+      scope: 'Outer'
+    }
+    template: loadJsonContent('modules/generic-role-assignment.json')
+    parameters: {
+      scope: {
+        value: resourceId
+      }
+      name: {
+        value: name
+      }
+      roleDefinitionId: {
+        value: contains(roleDefinitionId, '/providers/Microsoft.Authorization/roleDefinitions/')
+          ? roleDefinitionId
+          : subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitionId)
+      }
+      principalId: {
+        value: principalId
+      }
+      principalType: {
+        value: principalType
+      }
+      description: {
+        value: description
+      }
+    }
+  }
+}
+
 // OUTPUTS
 output maintenanceConfigurationIds array = [
   for i in range(0, length(maintenanceConfigurations)): {
