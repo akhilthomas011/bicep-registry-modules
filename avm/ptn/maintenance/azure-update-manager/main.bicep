@@ -41,12 +41,36 @@ param maintenanceConfigurations array = [
       timeZone: 'India Standard Time'
     }
     visibility: 'Custom'
+    filter: {
+      resourceTypes: [
+        'Microsoft.Compute/virtualMachines'
+        'Microsoft.hybridcompute/machines'
+      ]
+      resourceGroups: [
+        'rg-dge-access-prod-uaen-01'
+      ]
+      osTypes: [
+        'Windows'
+        'Linux'
+      ]
+      locations: [
+        'uaenorth'
+      ]
+      tagSettings: [
+        {
+          filterOperator: 'All'
+          tags: {
+            AUM_maintenance_ring: '1'
+          }
+        }
+      ]
+    }
   }
 ]
 // VARIABLES
 
-module maintenance_configuration 'br/public:avm/res/maintenance/maintenance-configuration:0.3.0' = [
-  for maintenanceConfiguration in maintenanceConfigurations: {
+module maintenance_configurations 'br/public:avm/res/maintenance/maintenance-configuration:0.3.0' = [
+  for (maintenanceConfiguration, i) in maintenanceConfigurations: {
     scope: resourceGroup(maintenanceConfigurationsResourceGroupName)
     name: take('maintenanceConfiguration-${maintenanceConfiguration.maintenanceConfigurationName}', 63)
     params: {
@@ -66,38 +90,17 @@ module maintenance_configuration 'br/public:avm/res/maintenance/maintenance-conf
   }
 ]
 
-resource resourceRoleAssignment 'Microsoft.Resources/deployments@2023-07-01' = {
-  name: '${guid(resourceId, principalId, roleDefinitionId)}-ResourceRoleAssignment'
-  properties: {
-    mode: 'Incremental'
-    expressionEvaluationOptions: {
-      scope: 'Outer'
-    }
-    template: loadJsonContent('modules/generic-role-assignment.json')
-    parameters: {
-      scope: {
-        value: resourceId
-      }
-      name: {
-        value: name
-      }
-      roleDefinitionId: {
-        value: contains(roleDefinitionId, '/providers/Microsoft.Authorization/roleDefinitions/')
-          ? roleDefinitionId
-          : subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleDefinitionId)
-      }
-      principalId: {
-        value: principalId
-      }
-      principalType: {
-        value: principalType
-      }
-      description: {
-        value: description
-      }
+module maintenance_configuration_assignments 'modules/configAssignments.bicep' = [
+  for (maintenanceConfiguration, i) in maintenanceConfigurations: {
+    name: take('maintenanceConfigAssignment-${maintenanceConfiguration.maintenanceConfigName}', 63)
+    params: {
+      maintenanceConfigResourceGroupName: maintenanceConfigurationsResourceGroupName
+      maintenanceConfigName: maintenanceConfiguration.maintenanceConfigName
+      maintenanceConfigAssignmentName: 'maintenanceConfigAssignment-${maintenanceConfiguration.maintenanceConfigName}'
+      filter: maintenanceConfiguration.filter
     }
   }
-}
+]
 
 // OUTPUTS
 output maintenanceConfigurationIds array = [
