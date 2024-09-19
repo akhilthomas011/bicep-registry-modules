@@ -19,3 +19,6 @@ resource maintenanceConfigAssignment 'Microsoft.Maintenance/configurationAssignm
     resourceId: subscriptionId
   }
 }
+
+output maintenanceConfigAssignmentId string = maintenanceConfigAssignment.id
+output maintenanceConfigAssignmentName string = maintenanceConfigAssignment.name

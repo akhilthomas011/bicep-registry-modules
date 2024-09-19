@@ -72,7 +72,7 @@ param maintenanceConfigurations array = [
 module maintenance_configurations 'br/public:avm/res/maintenance/maintenance-configuration:0.3.0' = [
   for (maintenanceConfiguration, i) in maintenanceConfigurations: {
     scope: resourceGroup(maintenanceConfigurationsResourceGroupName)
-    name: take('maintenanceConfiguration-${maintenanceConfiguration.maintenanceConfigurationName}', 63)
+    name: take('maintenanceConfiguration-${maintenanceConfiguration.maintenanceConfigName}', 63)
     params: {
       name: maintenanceConfiguration.maintenanceConfigName
       extensionProperties: {
@@ -80,12 +80,12 @@ module maintenance_configurations 'br/public:avm/res/maintenance/maintenance-con
       }
       installPatches: maintenanceConfiguration.?installPatches
       location: location
-      lock: maintenanceConfiguration.lock
+      lock: maintenanceConfiguration.?lock
       maintenanceScope: 'InGuestPatch'
-      maintenanceWindow: maintenanceConfiguration.maintenanceWindow
-      roleAssignments: maintenanceConfiguration.roleAssignments
-      tags: maintenanceConfiguration.tags
-      visibility: maintenanceConfiguration.visibility
+      maintenanceWindow: maintenanceConfiguration.?maintenanceWindow
+      roleAssignments: maintenanceConfiguration.?roleAssignments
+      tags: maintenanceConfiguration.?tags
+      visibility: maintenanceConfiguration.?visibility
     }
   }
 ]
@@ -95,9 +95,9 @@ module maintenance_configuration_assignments 'modules/configAssignments.bicep' =
     name: take('maintenanceConfigAssignment-${maintenanceConfiguration.maintenanceConfigName}', 63)
     params: {
       maintenanceConfigResourceGroupName: maintenanceConfigurationsResourceGroupName
-      maintenanceConfigName: maintenanceConfiguration.maintenanceConfigName
+      maintenanceConfigName: maintenance_configurations[i].outputs.name
       maintenanceConfigAssignmentName: 'maintenanceConfigAssignment-${maintenanceConfiguration.maintenanceConfigName}'
-      filter: maintenanceConfiguration.filter
+      filter: maintenanceConfiguration.?filter
     }
   }
 ]
@@ -105,6 +105,6 @@ module maintenance_configuration_assignments 'modules/configAssignments.bicep' =
 // OUTPUTS
 output maintenanceConfigurationIds array = [
   for i in range(0, length(maintenanceConfigurations)): {
-    id: maintenanceConfigurations[i].outputs.resourceId
+    id: maintenance_configurations[i].outputs.resourceId
   }
 ]
