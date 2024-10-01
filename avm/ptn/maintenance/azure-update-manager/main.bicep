@@ -11,7 +11,7 @@ param location string = 'westeurope'
 param maintenanceConfigurationsResourceGroupName string = 'myMaintenanceConfiguration-RG'
 param maintenanceConfigurations array = [
   {
-    maintenanceConfigName: 'maintenanceConfigurationRing-1'
+    maintenanceConfigName: 'maintenance_ring-01'
     location: location
     installPatches: {
       linuxParameters: {
@@ -41,7 +41,7 @@ param maintenanceConfigurations array = [
       timeZone: 'India Standard Time'
     }
     visibility: 'Custom'
-    filter: {
+    resourceFilter: {
       resourceTypes: [
         'Microsoft.Compute/virtualMachines'
         'Microsoft.hybridcompute/machines'
@@ -51,22 +51,37 @@ param maintenanceConfigurations array = [
       ]
       osTypes: [
         'Windows'
-        'Linux'
       ]
       locations: [
         'uaenorth'
       ]
-      tagSettings: [
-        {
-          filterOperator: 'All'
-          tags: {
-            AUM_maintenance_ring: '1'
-          }
+      tagSettings: {
+        filterOperator: 'All'
+        tags: {
+          aum_maintenance_ring: ['01']
         }
-      ]
+      }
     }
   }
 ]
+param tagAssignmentPolicy object = {
+  displayName: 'tagAssignmentPolicy'
+  description: 'tagAssignmentPolicy'
+  policyDefinitionId: 'policyDefinitionId'
+  parameters: {}
+  identity: 'SystemAssigned'
+  userAssignedIdentityId: ''
+  roleDefinitionIds: []
+  metadata: {}
+  nonComplianceMessages: []
+  enforcementMode: 'Default'
+  subscriptionId: ''
+  notScopes: []
+  location: location
+  overrides: []
+  resourceSelectors: []
+}
+
 // VARIABLES
 
 module maintenance_configurations 'br/public:avm/res/maintenance/maintenance-configuration:0.3.0' = [
@@ -97,10 +112,32 @@ module maintenance_configuration_assignments 'modules/configAssignments.bicep' =
       maintenanceConfigResourceGroupName: maintenanceConfigurationsResourceGroupName
       maintenanceConfigName: maintenance_configurations[i].outputs.name
       maintenanceConfigAssignmentName: 'maintenanceConfigAssignment-${maintenanceConfiguration.maintenanceConfigName}'
-      filter: maintenanceConfiguration.?filter
+      filter: maintenanceConfiguration.?resourceFilter
     }
   }
 ]
+
+module policyAssignment 'modules/policyAssignments.bicep' = {
+  name: 'policyAssignment'
+  params: {
+    name: tagAssignmentPolicy.name
+    displayName: tagAssignmentPolicy.displayName
+    description: tagAssignmentPolicy.description
+    policyDefinitionId: tagAssignmentPolicy.policyDefinitionId
+    parameters: tagAssignmentPolicy.parameters
+    identity: tagAssignmentPolicy.identity
+    userAssignedIdentityId: tagAssignmentPolicy.userAssignedIdentityId
+    roleDefinitionIds: tagAssignmentPolicy.roleDefinitionIds
+    metadata: tagAssignmentPolicy.metadata
+    nonComplianceMessages: tagAssignmentPolicy.nonComplianceMessages
+    enforcementMode: tagAssignmentPolicy.enforcementMode
+    subscriptionId: tagAssignmentPolicy.subscriptionId
+    notScopes: tagAssignmentPolicy.notScopes
+    location: location
+    overrides: tagAssignmentPolicy.overrides
+    resourceSelectors: tagAssignmentPolicy.resourceSelectors
+  }
+}
 
 // OUTPUTS
 output maintenanceConfigurationIds array = [

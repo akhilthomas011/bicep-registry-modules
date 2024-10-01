@@ -3,7 +3,7 @@ targetScope = 'subscription'
 param maintenanceConfigResourceGroupName string
 param maintenanceConfigName string
 param maintenanceConfigAssignmentName string
-param filter object = {}
+param filter object
 param subscriptionId string = subscription().id
 
 resource maintenanceConfig 'Microsoft.Maintenance/maintenanceConfigurations@2023-04-01' existing = {
