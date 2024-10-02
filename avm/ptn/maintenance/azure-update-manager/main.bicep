@@ -7,7 +7,7 @@ metadata category = 'Compute'
 targetScope = 'subscription'
 
 // PARAMETERS
-param location string = 'westeurope'
+param location string = deployment().location
 param maintenanceConfigurationsResourceGroupName string = 'myMaintenanceConfiguration-RG'
 param maintenanceConfigurations array = [
   {
@@ -59,31 +59,16 @@ param maintenanceConfigurations array = [
         filterOperator: 'All'
         tags: {
           aum_maintenance_ring: ['01']
+          aum_maintenance: ['enabled']
         }
       }
     }
   }
 ]
-param tagAssignmentPolicy object = {
-  displayName: 'tagAssignmentPolicy'
-  description: 'tagAssignmentPolicy'
-  policyDefinitionId: 'policyDefinitionId'
-  parameters: {}
-  identity: 'SystemAssigned'
-  userAssignedIdentityId: ''
-  roleDefinitionIds: []
-  metadata: {}
-  nonComplianceMessages: []
-  enforcementMode: 'Default'
-  subscriptionId: ''
-  notScopes: []
-  location: location
-  overrides: []
-  resourceSelectors: []
-}
 
 // VARIABLES
 
+// MODULES
 module maintenance_configurations 'br/public:avm/res/maintenance/maintenance-configuration:0.3.0' = [
   for (maintenanceConfiguration, i) in maintenanceConfigurations: {
     scope: resourceGroup(maintenanceConfigurationsResourceGroupName)
@@ -117,27 +102,82 @@ module maintenance_configuration_assignments 'modules/configAssignments.bicep' =
   }
 ]
 
-module policyAssignment 'modules/policyAssignments.bicep' = {
-  name: 'policyAssignment'
+var aumEnablingTag = [{ key: 'aum_maintenance', value: 'enabled' }]
+
+module setPrereqPolicyAssignment 'modules/policyAssignments.bicep' = {
+  name: 'AzureUpdateManagerPrerequisitePolicyAssignment'
   params: {
-    name: tagAssignmentPolicy.name
-    displayName: tagAssignmentPolicy.displayName
-    description: tagAssignmentPolicy.description
-    policyDefinitionId: tagAssignmentPolicy.policyDefinitionId
-    parameters: tagAssignmentPolicy.parameters
-    identity: tagAssignmentPolicy.identity
-    userAssignedIdentityId: tagAssignmentPolicy.userAssignedIdentityId
-    roleDefinitionIds: tagAssignmentPolicy.roleDefinitionIds
-    metadata: tagAssignmentPolicy.metadata
-    nonComplianceMessages: tagAssignmentPolicy.nonComplianceMessages
-    enforcementMode: tagAssignmentPolicy.enforcementMode
-    subscriptionId: tagAssignmentPolicy.subscriptionId
-    notScopes: tagAssignmentPolicy.notScopes
+    name: 'AzureUpdateManagerPrerequisitePolicyAssignment'
+    displayName: 'Azure Update Manager Prerequisite deployment based on Tags'
+    description: 'This policy deploys prerequisites for Azure Update Manager based on Tags of the Azure VMs/ARC enabled Servers'
+    policyDefinitionId: '/providers/Microsoft.Authorization/policyDefinitions/9905ca54-1471-49c6-8291-7582c04cd4d4'
+    parameters: {
+      tagOperator: {
+        value: 'All'
+      }
+      tagValues: {
+        value: aumEnablingTag
+      }
+      effect: {
+        value: 'DeployIfNotExists'
+      }
+    }
+    identity: 'SystemAssigned'
+    userAssignedIdentityId: ''
+    roleDefinitionIds: ['/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c']
+    metadata: {}
+    nonComplianceMessages: []
+    enforcementMode: 'Default'
+    subscriptionId: subscription().subscriptionId
+    notScopes: []
     location: location
-    overrides: tagAssignmentPolicy.overrides
-    resourceSelectors: tagAssignmentPolicy.resourceSelectors
+    overrides: []
+    resourceSelectors: []
   }
 }
+
+// module setPrereqPolicyAssignment 'modules/policyAssignments.bicep' = [
+//   for (maintenanceConfiguration, i) in maintenanceConfigurations: {
+//     name: '${maintenanceConfiguration.maintenanceConfigName}-prereqPolicyAssignment'
+//     params: {
+//       name: '${maintenanceConfiguration.maintenanceConfigName}-prereqPolicyAssignment'
+//       displayName: 'Azure Update Manager Prerequisite Policy${maintenanceConfiguration.maintenanceConfigName}-prereqPolicyAssignment'
+//       description: '${maintenanceConfiguration.maintenanceConfigName}-prereqPolicyAssignment'
+//       policyDefinitionId: '/providers/Microsoft.Authorization/policyDefinitions/9905ca54-1471-49c6-8291-7582c04cd4d4'
+//       parameters: {
+//         tagOperator: {
+//           value: maintenanceConfiguration.resourceFilter.tagSettings.filterOperator ?? 'All'
+//         }
+//         tagValues: {
+//           value: aumEnablingTag
+//         }
+//         locations: {
+//           value: [location]
+//         }
+//         effect: {
+//           value: 'DeployIfNotExists'
+//         }
+//         operatingSystemTypes: {
+//           value: maintenanceConfiguration.resourceFilter.osTypes ?? []
+//         }
+//         resourceGroups: {
+//           value: maintenanceConfiguration.resourceFilter.resourceGroups ?? []
+//         }
+//       }
+//       identity: 'SystemAssigned'
+//       userAssignedIdentityId: ''
+//       roleDefinitionIds: ['/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c']
+//       metadata: {}
+//       nonComplianceMessages: []
+//       enforcementMode: 'Default'
+//       subscriptionId: subscription().subscriptionId
+//       notScopes: []
+//       location: location
+//       overrides: []
+//       resourceSelectors: []
+//     }
+//   }
+// ]
 
 // OUTPUTS
 output maintenanceConfigurationIds array = [
@@ -145,3 +185,5 @@ output maintenanceConfigurationIds array = [
     id: maintenance_configurations[i].outputs.resourceId
   }
 ]
+
+output JsonObject string = '[${string(aumEnablingTag)}]'

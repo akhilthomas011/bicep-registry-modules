@@ -41,6 +41,7 @@ param location string = deployment().location
 @sys.description('Optional. Enable telemetry via a Globally Unique Identifier (GUID).')
 param enableDefaultTelemetry bool = true
 
+#disable-next-line no-deployments-resources
 resource defaultTelemetry 'Microsoft.Resources/deployments@2021-04-01' = if (enableDefaultTelemetry) {
   name: 'pid-47ed15a6-730a-4827-bcb4-0fd963ffbd82-${uniqueString(deployment().name, location)}'
   location: location
@@ -74,4 +75,8 @@ output name string = policyDefinition.name
 output resourceId string = policyDefinition.id
 
 @sys.description('Policy Definition Role Definition IDs.')
-output roleDefinitionIds array = (contains(policyDefinition.properties.policyRule.then, 'details') ? ((contains(policyDefinition.properties.policyRule.then.details, 'roleDefinitionIds') ? policyDefinition.properties.policyRule.then.details.roleDefinitionIds : [])) : [])
+output roleDefinitionIds array = (contains(policyDefinition.properties.policyRule.then, 'details')
+  ? ((contains(policyDefinition.properties.policyRule.then.details, 'roleDefinitionIds')
+      ? policyDefinition.properties.policyRule.then.details.roleDefinitionIds
+      : []))
+  : [])
