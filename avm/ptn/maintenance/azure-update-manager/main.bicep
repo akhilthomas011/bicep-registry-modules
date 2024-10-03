@@ -48,6 +48,7 @@ param maintenanceConfigurations array = [
       ]
       resourceGroups: [
         'rg-dge-access-prod-uaen-01'
+        'maintenanceConfigTest-RG'
       ]
       osTypes: [
         'Windows'
