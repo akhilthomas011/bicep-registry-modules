@@ -103,7 +103,7 @@ module maintenance_configuration_assignments 'modules/configAssignments.bicep' =
   }
 ]
 
-var aumEnablingTag = [{ key: 'aum_maintenance', value: 'enabled' }]
+var aumEnablingTagObject = [{ key: 'aum_maintenance', value: 'enabled' }]
 
 module setPrereqPolicyAssignment 'modules/policyAssignments.bicep' = {
   name: 'AzureUpdateManagerPrerequisitePolicyAssignment'
@@ -117,7 +117,7 @@ module setPrereqPolicyAssignment 'modules/policyAssignments.bicep' = {
         value: 'All'
       }
       tagValues: {
-        value: aumEnablingTag
+        value: aumEnablingTagObject
       }
       effect: {
         value: 'DeployIfNotExists'
@@ -137,7 +137,37 @@ module setPrereqPolicyAssignment 'modules/policyAssignments.bicep' = {
   }
 }
 
-// module setPrereqPolicyAssignment 'modules/policyAssignments.bicep' = [
+var aumEnablingTagArray = { key: 'aum_maintenance', value: 'enabled' }
+module configurePeriodicCheckingAzureVMs 'modules/policyAssignments.bicep' = {
+  name: 'AzureUpdateManagerConfigurePeriodicCheckingAzVMPolicyAssignment'
+  params: {
+    name: 'AzureUpdateManagerConfigurePeriodicCheckingAzVMPolicyAssignment'
+    displayName: 'Enable Azure Update Manager Periodic Checking for Azure VMs based on Tags'
+    description: 'This policy enables periodic checking for updates on Azure based on Tags of the Azure VMs'
+    policyDefinitionId: '/providers/Microsoft.Authorization/policyDefinitions/59efceea-0c96-497e-a4a1-4eb2290dac15'
+    parameters: {
+      tagOperator: {
+        value: 'All'
+      }
+      tagValues: {
+        value: aumEnablingTagArray
+      }
+    }
+    identity: 'SystemAssigned'
+    userAssignedIdentityId: ''
+    roleDefinitionIds: ['/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c']
+    metadata: {}
+    nonComplianceMessages: []
+    enforcementMode: 'Default'
+    subscriptionId: subscription().subscriptionId
+    notScopes: []
+    location: location
+    overrides: []
+    resourceSelectors: []
+  }
+}
+
+// module setPrereqPolicyAssignment1 'modules/policyAssignments.bicep' = [
 //   for (maintenanceConfiguration, i) in maintenanceConfigurations: {
 //     name: '${maintenanceConfiguration.maintenanceConfigName}-prereqPolicyAssignment'
 //     params: {
@@ -186,5 +216,3 @@ output maintenanceConfigurationIds array = [
     id: maintenance_configurations[i].outputs.resourceId
   }
 ]
-
-output JsonObject string = '[${string(aumEnablingTag)}]'
