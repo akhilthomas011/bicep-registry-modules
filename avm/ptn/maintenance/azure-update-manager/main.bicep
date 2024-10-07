@@ -380,7 +380,7 @@ module requireAUMTagPolicyDefinition 'modules/policyDefinition.bicep' = {
               {
                 not: {
                   field: '[concat(\'tags[\', parameters(\'maintenanceEnablingTagName\'), \']\')]'
-                  equals: '[parameters(\'maintenanceEnablingTagValue\')]'
+                  exists: false
                 }
               }
             ]
