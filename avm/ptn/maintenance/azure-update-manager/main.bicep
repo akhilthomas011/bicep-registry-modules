@@ -316,8 +316,8 @@ module requireAUMTagPolicyDefinition 'modules/policyDefinition.bicep' = {
   name: 'requireAUMTagPolicyDefinition'
   params: {
     name: 'requireAUMTagPolicyDefinition'
-    displayName: 'Require AUM maintenance ring tag on Azure VMs/ARC enabled servers'
-    description: 'Enforces existence of a tag on Azure VMs/ARC enabled servers. Does not apply to other resources/resource groups.'
+    displayName: 'Require tags on Azure VMs/ARC enabled servers for Azure Update Manager maintenance'
+    description: 'Enforces existence of tags on Azure VMs/ARC enabled servers for Azure Update Manager maintenance. Does not apply to other resources/resource groups.'
     mode: 'Indexed'
     metadata: {
       version: '1.0.0'
