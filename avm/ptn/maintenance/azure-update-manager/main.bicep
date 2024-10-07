@@ -79,9 +79,6 @@ param maintenanceRingTagValues array = [
 ]
 
 // VARIABLES
-var aum_maintenance_rings = [
-  for (maintenanceConfiguration, index) in maintenanceConfigurations: maintenanceConfiguration.resourceFilter.tagSettings.tags.aum_maintenance_ring[0]
-]
 
 var aumEnablingTag = {
   '${enableAUMTagName}': enableAUMTagValue
