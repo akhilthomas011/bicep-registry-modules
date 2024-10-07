@@ -345,14 +345,6 @@ module requireAUMTagPolicyDefinition 'modules/policyDefinition.bicep' = {
         }
         defaultValue: enableAUMTagName
       }
-      maintenanceEnablingTagValue: {
-        type: 'String'
-        metadata: {
-          displayName: 'AUM maintenance enabling tag value'
-          description: 'Value of the tag. For example, \'Enabled\''
-        }
-        defaultValue: enableAUMTagValue
-      }
     }
     policyRule: {
       if: {
@@ -410,9 +402,6 @@ module requireAUMTagPolicyAssignment 'modules/policyAssignments.bicep' = {
       }
       maintenanceEnablingTagName: {
         value: enableAUMTagName
-      }
-      maintenanceEnablingTagValue: {
-        value: enableAUMTagValue
       }
     }
     identity: 'SystemAssigned'
