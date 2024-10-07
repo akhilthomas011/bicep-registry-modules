@@ -41,6 +41,7 @@ param maintenanceConfigurations array = [
       timeZone: 'India Standard Time'
     }
     visibility: 'Custom'
+    maintenanceRing: '01'
     resourceFilter: {
       resourceTypes: [
         'Microsoft.Compute/virtualMachines'
@@ -57,21 +58,34 @@ param maintenanceConfigurations array = [
       locations: [
         'uaenorth'
       ]
-      tagSettings: {
-        filterOperator: 'All'
-        tags: {
-          aum_maintenance_ring: ['01']
-          aum_maintenance: ['enabled']
-        }
-      }
     }
   }
 ]
 
-//param aumEnablingTag object = { key: 'aum_maintenance', value: 'enabled' }
-param aumEnablingTag object = { aum_maintenance: 'enabled' }
+@description('The tag name that will be used to filter the VMs/ARC enabled servers for enabling Azure Update Manager.')
+param enableAUMTagName string = 'aum_maintenance'
+
+@description('The tag value that will be used to filter the VMs/ARC enabled servers for enabling Azure Update Manager.')
+param enableAUMTagValue string = 'Enabled'
+
+@description('The tag name that will be used to filter the VMs/ARC enabled servers for the maintenance ring.')
+param maintenanceRingTagName string = 'aum_maintenance_ring'
+
+@description('The tag value that will be used to filter the VMs/ARC enabled servers for the maintenance ring.')
+param maintenanceRingTagValues array = [
+  'Pilot'
+  'Ring-01'
+  'Ring-02'
+]
 
 // VARIABLES
+var aum_maintenance_rings = [
+  for (maintenanceConfiguration, index) in maintenanceConfigurations: maintenanceConfiguration.resourceFilter.tagSettings.tags.aum_maintenance_ring[0]
+]
+
+var aumEnablingTag = {
+  '${enableAUMTagName}': enableAUMTagValue
+}
 
 var aumEnablingTagObject = {
   key: items(aumEnablingTag)[0].key
@@ -107,7 +121,19 @@ module maintenance_configuration_assignments 'modules/configAssignments.bicep' =
       maintenanceConfigResourceGroupName: maintenanceConfigurationsResourceGroupName
       maintenanceConfigName: maintenance_configurations[i].outputs.name
       maintenanceConfigAssignmentName: 'maintenanceConfigAssignment-${maintenanceConfiguration.maintenanceConfigName}'
-      filter: maintenanceConfiguration.?resourceFilter
+      filter: {
+        resourceTypes: maintenanceConfiguration.resourceFilter.resourceTypes
+        resourceGroups: maintenanceConfiguration.resourceFilter.resourceGroups
+        osTypes: maintenanceConfiguration.resourceFilter.osTypes
+        locations: maintenanceConfiguration.resourceFilter.locations
+        tagsettings: {
+          filterOperator: 'All'
+          tags: {
+            '${maintenanceRingTagName}': [maintenanceConfiguration.maintenanceRing]
+            '${enableAUMTagName}': [enableAUMTagValue]
+          }
+        }
+      }
     }
   }
 ]
@@ -298,19 +324,37 @@ module requireAUMTagPolicyDefinition 'modules/policyDefinition.bicep' = {
       category: 'Tags'
     }
     parameters: {
-      tagName: {
+      maintenanceRingTagName: {
         type: 'String'
         metadata: {
           displayName: 'AUM maintenance ring tag name'
-          description: 'Name of the AUM maintenance ring tag, such as \'aum_maintenance_ring\''
+          description: 'Name of the AUM maintenance ring tag. For example \'aum_maintenance_ring\''
         }
+        defaultValue: maintenanceRingTagName
       }
-      tagValue: {
+      maintenanceRingTagValues: {
         type: 'Array'
         metadata: {
           displayName: 'AUM maintenance ring tag allowed values'
-          description: 'Values of the tag, such as [01,02,03]'
+          description: 'Values of the tag. For example [01,02,03]'
         }
+        defaultValue: maintenanceRingTagValues
+      }
+      maintenanceEnablingTagName: {
+        type: 'String'
+        metadata: {
+          displayName: 'AUM maintenance enabling tag name'
+          description: 'Name of the AUM maintenance enabling tag. For example \'aum_maintenance\''
+        }
+        defaultValue: enableAUMTagName
+      }
+      maintenanceEnablingTagValue: {
+        type: 'String'
+        metadata: {
+          displayName: 'AUM maintenance enabling tag value'
+          description: 'Value of the tag. For example, \'Enabled\''
+        }
+        defaultValue: enableAUMTagValue
       }
     }
     policyRule: {
@@ -329,10 +373,20 @@ module requireAUMTagPolicyDefinition 'modules/policyDefinition.bicep' = {
             ]
           }
           {
-            not: {
-              field: '[concat(\'tags[\', parameters(\'tagName\'), \']\')]'
-              in: '[parameters(\'tagValue\')]'
-            }
+            anyOf: [
+              {
+                not: {
+                  field: '[concat(\'tags[\', parameters(\'maintenanceRingTagName\'), \']\')]'
+                  in: '[parameters(\'maintenanceRingTagValues\')]'
+                }
+              }
+              {
+                not: {
+                  field: '[concat(\'tags[\', parameters(\'maintenanceEnablingTagName\'), \']\')]'
+                  equals: '[parameters(\'maintenanceEnablingTagValue\')]'
+                }
+              }
+            ]
           }
         ]
       }
@@ -340,6 +394,41 @@ module requireAUMTagPolicyDefinition 'modules/policyDefinition.bicep' = {
         effect: 'deny'
       }
     }
+  }
+}
+
+module requireAUMTagPolicyAssignment 'modules/policyAssignments.bicep' = {
+  name: 'requireAUMTagPolicyAssignment'
+  params: {
+    name: 'requireAUMTagPolicyAssignment'
+    displayName: 'Require AUM maintenance ring tag on Azure VMs/ARC enabled servers'
+    description: 'Enforces existence of a tag on Azure VMs/ARC enabled servers.'
+    policyDefinitionId: requireAUMTagPolicyDefinition.outputs.resourceId
+    parameters: {
+      maintenanceRingTagName: {
+        value: maintenanceRingTagName
+      }
+      maintenanceRingTagValues: {
+        value: maintenanceRingTagValues
+      }
+      maintenanceEnablingTagName: {
+        value: enableAUMTagName
+      }
+      maintenanceEnablingTagValue: {
+        value: enableAUMTagValue
+      }
+    }
+    identity: 'SystemAssigned'
+    userAssignedIdentityId: ''
+    roleDefinitionIds: ['/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c']
+    metadata: {}
+    nonComplianceMessages: []
+    enforcementMode: 'Default'
+    subscriptionId: subscription().subscriptionId
+    notScopes: []
+    location: location
+    overrides: []
+    resourceSelectors: []
   }
 }
 
