@@ -52,6 +52,7 @@ param maintenanceConfigurations array = [
       ]
       osTypes: [
         'Windows'
+        'Linux'
       ]
       locations: [
         'uaenorth'
@@ -67,7 +68,15 @@ param maintenanceConfigurations array = [
   }
 ]
 
+//param aumEnablingTag object = { key: 'aum_maintenance', value: 'enabled' }
+param aumEnablingTag object = { aum_maintenance: 'enabled' }
+
 // VARIABLES
+
+var aumEnablingTagObject = {
+  key: items(aumEnablingTag)[0].key
+  value: items(aumEnablingTag)[0].value
+}
 
 // MODULES
 module maintenance_configurations 'br/public:avm/res/maintenance/maintenance-configuration:0.3.0' = [
@@ -103,21 +112,19 @@ module maintenance_configuration_assignments 'modules/configAssignments.bicep' =
   }
 ]
 
-var aumEnablingTagObject = [{ key: 'aum_maintenance', value: 'enabled' }]
-
 module setPrereqPolicyAssignment 'modules/policyAssignments.bicep' = {
   name: 'AzureUpdateManagerPrerequisitePolicyAssignment'
   params: {
     name: 'AzureUpdateManagerPrerequisitePolicyAssignment'
-    displayName: 'Azure Update Manager Prerequisite deployment based on Tags'
-    description: 'This policy deploys prerequisites for Azure Update Manager based on Tags of the Azure VMs/ARC enabled Servers'
+    displayName: 'Azure Update Manager prerequisites settings update based on Tags'
+    description: 'Azure Update Manager prerequisites settings update based on Tags of the Azure VMs/ARC enabled Servers'
     policyDefinitionId: '/providers/Microsoft.Authorization/policyDefinitions/9905ca54-1471-49c6-8291-7582c04cd4d4'
     parameters: {
       tagOperator: {
         value: 'All'
       }
       tagValues: {
-        value: aumEnablingTagObject
+        value: [aumEnablingTagObject]
       }
       effect: {
         value: 'DeployIfNotExists'
@@ -137,20 +144,22 @@ module setPrereqPolicyAssignment 'modules/policyAssignments.bicep' = {
   }
 }
 
-var aumEnablingTagArray = { key: 'aum_maintenance', value: 'enabled' }
-module configurePeriodicCheckingAzureVMs 'modules/policyAssignments.bicep' = {
-  name: 'AzureUpdateManagerConfigurePeriodicCheckingAzVMPolicyAssignment'
+module configurePeriodicCheckingAzureVMsWin 'modules/policyAssignments.bicep' = {
+  name: 'AUMConfigurePeriodicCheckingAzVMPolicyAssignmentWindows'
   params: {
-    name: 'AzureUpdateManagerConfigurePeriodicCheckingAzVMPolicyAssignment'
-    displayName: 'Enable Azure Update Manager Periodic Checking for Azure VMs based on Tags'
-    description: 'This policy enables periodic checking for updates on Azure based on Tags of the Azure VMs'
+    name: 'AUMConfigurePeriodicCheckingAzVMPolicyAssignmentWindows'
+    displayName: 'Azure Update Manager enabling periodic assessment on Azure VMs based on Tags for Windows'
+    description: 'This policy enables periodic checking for updates on Azure based on Tags of the Azure VMs for Windows'
     policyDefinitionId: '/providers/Microsoft.Authorization/policyDefinitions/59efceea-0c96-497e-a4a1-4eb2290dac15'
     parameters: {
       tagOperator: {
         value: 'All'
       }
       tagValues: {
-        value: aumEnablingTagArray
+        value: aumEnablingTag
+      }
+      osType: {
+        value: 'Windows'
       }
     }
     identity: 'SystemAssigned'
@@ -167,48 +176,172 @@ module configurePeriodicCheckingAzureVMs 'modules/policyAssignments.bicep' = {
   }
 }
 
-// module setPrereqPolicyAssignment1 'modules/policyAssignments.bicep' = [
-//   for (maintenanceConfiguration, i) in maintenanceConfigurations: {
-//     name: '${maintenanceConfiguration.maintenanceConfigName}-prereqPolicyAssignment'
-//     params: {
-//       name: '${maintenanceConfiguration.maintenanceConfigName}-prereqPolicyAssignment'
-//       displayName: 'Azure Update Manager Prerequisite Policy${maintenanceConfiguration.maintenanceConfigName}-prereqPolicyAssignment'
-//       description: '${maintenanceConfiguration.maintenanceConfigName}-prereqPolicyAssignment'
-//       policyDefinitionId: '/providers/Microsoft.Authorization/policyDefinitions/9905ca54-1471-49c6-8291-7582c04cd4d4'
-//       parameters: {
-//         tagOperator: {
-//           value: maintenanceConfiguration.resourceFilter.tagSettings.filterOperator ?? 'All'
-//         }
-//         tagValues: {
-//           value: aumEnablingTag
-//         }
-//         locations: {
-//           value: [location]
-//         }
-//         effect: {
-//           value: 'DeployIfNotExists'
-//         }
-//         operatingSystemTypes: {
-//           value: maintenanceConfiguration.resourceFilter.osTypes ?? []
-//         }
-//         resourceGroups: {
-//           value: maintenanceConfiguration.resourceFilter.resourceGroups ?? []
-//         }
-//       }
-//       identity: 'SystemAssigned'
-//       userAssignedIdentityId: ''
-//       roleDefinitionIds: ['/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c']
-//       metadata: {}
-//       nonComplianceMessages: []
-//       enforcementMode: 'Default'
-//       subscriptionId: subscription().subscriptionId
-//       notScopes: []
-//       location: location
-//       overrides: []
-//       resourceSelectors: []
-//     }
-//   }
-// ]
+module configurePeriodicCheckingAzureVMs 'modules/policyAssignments.bicep' = {
+  name: 'AUMConfigurePeriodicCheckingAzVMPolicyAssignmentLinux'
+  params: {
+    name: 'AUMConfigurePeriodicCheckingAzVMPolicyAssignmentLinux'
+    displayName: 'Azure Update Manager enabling periodic assessment on Azure VMs based on Tags for Linux'
+    description: 'This policy enables periodic checking for updates on Azure based on Tags of the Azure VMs for Linux'
+    policyDefinitionId: '/providers/Microsoft.Authorization/policyDefinitions/59efceea-0c96-497e-a4a1-4eb2290dac15'
+    parameters: {
+      tagOperator: {
+        value: 'All'
+      }
+      tagValues: {
+        value: aumEnablingTag
+      }
+      osType: {
+        value: 'Linux'
+      }
+    }
+    identity: 'SystemAssigned'
+    userAssignedIdentityId: ''
+    roleDefinitionIds: ['/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c']
+    metadata: {}
+    nonComplianceMessages: []
+    enforcementMode: 'Default'
+    subscriptionId: subscription().subscriptionId
+    notScopes: []
+    location: location
+    overrides: []
+    resourceSelectors: []
+  }
+}
+
+resource configurePeriodicCheckingAzureVMsremediateTask 'Microsoft.PolicyInsights/remediations@2021-10-01' = {
+  name: guid('Remediate', configurePeriodicCheckingAzureVMs.name, subscription().id)
+  properties: {
+    failureThreshold: {
+      percentage: 1
+    }
+    resourceCount: 500
+    policyAssignmentId: configurePeriodicCheckingAzureVMs.outputs.resourceId
+    policyDefinitionReferenceId: '/providers/Microsoft.Authorization/policyDefinitions/59efceea-0c96-497e-a4a1-4eb2290dac15'
+    parallelDeployments: 10
+    resourceDiscoveryMode: 'ReEvaluateCompliance'
+  }
+}
+
+module configurePeriodicCheckingARCServersWindows 'modules/policyAssignments.bicep' = {
+  name: 'AUMConfigurePeriodicCheckingARCVMPolicyAssignmentWindows'
+  params: {
+    name: 'AUMConfigurePeriodicCheckingARCVMPolicyAssignmentWindows'
+    displayName: 'Azure Update Manager enabling periodic assessment on ARC Servers based on Tags for Windows'
+    description: 'This policy enables periodic checking for updates on Azure based on Tags of the ARC Servers for Windows'
+    policyDefinitionId: '/providers/Microsoft.Authorization/policyDefinitions/bfea026e-043f-4ff4-9d1b-bf301ca7ff46'
+    parameters: {
+      tagOperator: {
+        value: 'All'
+      }
+      tagValues: {
+        value: aumEnablingTag
+      }
+      osType: {
+        value: 'Windows'
+      }
+    }
+    identity: 'SystemAssigned'
+    userAssignedIdentityId: ''
+    roleDefinitionIds: ['/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c']
+    metadata: {}
+    nonComplianceMessages: []
+    enforcementMode: 'Default'
+    subscriptionId: subscription().subscriptionId
+    notScopes: []
+    location: location
+    overrides: []
+    resourceSelectors: []
+  }
+}
+
+module configurePeriodicCheckingARCServersLinux 'modules/policyAssignments.bicep' = {
+  name: 'AUMConfigurePeriodicCheckingARCVMPolicyAssignmentLinux'
+  params: {
+    name: 'AUMConfigurePeriodicCheckingARCVMPolicyAssignmentWindows'
+    displayName: 'Azure Update Manager enabling periodic assessment on ARC Servers based on Tags for Linux'
+    description: 'This policy enables periodic checking for updates on Azure based on Tags of the ARC Servers for Linuxs'
+    policyDefinitionId: '/providers/Microsoft.Authorization/policyDefinitions/bfea026e-043f-4ff4-9d1b-bf301ca7ff46'
+    parameters: {
+      tagOperator: {
+        value: 'All'
+      }
+      tagValues: {
+        value: aumEnablingTag
+      }
+      osType: {
+        value: 'Linux'
+      }
+    }
+    identity: 'SystemAssigned'
+    userAssignedIdentityId: ''
+    roleDefinitionIds: ['/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c']
+    metadata: {}
+    nonComplianceMessages: []
+    enforcementMode: 'Default'
+    subscriptionId: subscription().subscriptionId
+    notScopes: []
+    location: location
+    overrides: []
+    resourceSelectors: []
+  }
+}
+
+module requireAUMTagPolicyDefinition 'modules/policyDefinition.bicep' = {
+  name: 'requireAUMTagPolicyDefinition'
+  params: {
+    name: 'requireAUMTagPolicyDefinition'
+    displayName: 'Require AUM maintenance ring tag on Azure VMs/ARC enabled servers'
+    description: 'Enforces existence of a tag on Azure VMs/ARC enabled servers. Does not apply to other resources/resource groups.'
+    mode: 'Indexed'
+    metadata: {
+      version: '1.0.0'
+      category: 'Tags'
+    }
+    parameters: {
+      tagName: {
+        type: 'String'
+        metadata: {
+          displayName: 'AUM maintenance ring tag name'
+          description: 'Name of the AUM maintenance ring tag, such as \'aum_maintenance_ring\''
+        }
+      }
+      tagValue: {
+        type: 'Array'
+        metadata: {
+          displayName: 'AUM maintenance ring tag allowed values'
+          description: 'Values of the tag, such as [01,02,03]'
+        }
+      }
+    }
+    policyRule: {
+      if: {
+        allOf: [
+          {
+            anyOf: [
+              {
+                field: 'type'
+                equals: 'Microsoft.Compute/virtualMachines'
+              }
+              {
+                field: 'type'
+                equals: 'Microsoft.HybridCompute/machines'
+              }
+            ]
+          }
+          {
+            not: {
+              field: '[concat(\'tags[\', parameters(\'tagName\'), \']\')]'
+              in: '[parameters(\'tagValue\')]'
+            }
+          }
+        ]
+      }
+      then: {
+        effect: 'deny'
+      }
+    }
+  }
+}
 
 // OUTPUTS
 output maintenanceConfigurationIds array = [

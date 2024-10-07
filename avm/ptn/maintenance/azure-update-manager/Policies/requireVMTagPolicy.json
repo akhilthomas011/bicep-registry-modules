@@ -1,0 +1,56 @@
+{
+  "properties": {
+    "displayName": "Require AUM maintenance ring tag on Azure VMs/ARC enabled servers",
+    "policyType": "Custom",
+    "mode": "Indexed",
+    "description": "Enforces existence of a tag on Azure VMs/ARC enabled servers. Does not apply to other resources/resource groups.",
+    "metadata": {
+      "version": "1.0.0",
+      "category": "Tags"
+    },
+    "version": "1.0.0",
+    "parameters": {
+      "tagName": {
+        "type": "String",
+        "metadata": {
+          "displayName": "AUM maintenance ring tag name",
+          "description": "Name of the AUM maintenance ring tag, such as 'aum_maintenance_ring'"
+        }
+      },
+      "tagValue": {
+        "type": "String",
+        "metadata": {
+          "displayName": "AUM maintenance ring tag value",
+          "description": "Value of the tag, such as '01'"
+        }
+      }
+    },
+    "policyRule": {
+      "if": {
+        "allOf": [
+          {
+            "anyOf": [
+              {
+                "field": "type",
+                "equals": "Microsoft.Compute/virtualMachines"
+              },
+              {
+                "field": "type",
+                "equals": "Microsoft.HybridCompute/machines"
+              }
+            ]
+          },
+          {
+            "not": {
+              "field": "[concat('tags[', parameters('tagName'), ']')]",
+              "equals": "[parameters('tagValue')]"
+            }
+          }
+        ]
+      },
+      "then": {
+        "effect": "deny"
+      }
+    }
+  }
+}
