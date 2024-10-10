@@ -77,7 +77,8 @@ param maintenanceRingTagValues array = [
   'Ring-01'
   'Ring-02'
 ]
-
+@description('The name of the managed identity that will be used to deploy the policies.')
+param policyDeploymentManagedIdentityName string = 'id-aumpolicy-contributor-001'
 // VARIABLES
 
 var aumEnablingTag = {
@@ -90,6 +91,15 @@ var aumEnablingTagObject = {
 }
 
 // MODULES
+
+module id_aumpolicy_contributor 'br/public:avm/res/managed-identity/user-assigned-identity:0.4.0' = {
+  name: 'userAssignedManagedIdentity'
+  scope: resourceGroup(maintenanceConfigurationsResourceGroupName)
+  params: {
+    name: policyDeploymentManagedIdentityName
+    location: location
+  }
+}
 module maintenance_configurations 'br/public:avm/res/maintenance/maintenance-configuration:0.3.0' = [
   for (maintenanceConfiguration, i) in maintenanceConfigurations: {
     scope: resourceGroup(maintenanceConfigurationsResourceGroupName)
@@ -153,8 +163,8 @@ module setPrereqPolicyAssignment 'modules/policyAssignments.bicep' = {
         value: 'DeployIfNotExists'
       }
     }
-    identity: 'SystemAssigned'
-    userAssignedIdentityId: ''
+    identity: 'UserAssigned'
+    userAssignedIdentityId: id_aumpolicy_contributor.outputs.resourceId
     roleDefinitionIds: ['/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c']
     metadata: {}
     nonComplianceMessages: []
@@ -185,8 +195,8 @@ module configurePeriodicCheckingAzureVMsWin 'modules/policyAssignments.bicep' = 
         value: 'Windows'
       }
     }
-    identity: 'SystemAssigned'
-    userAssignedIdentityId: ''
+    identity: 'UserAssigned'
+    userAssignedIdentityId: id_aumpolicy_contributor.outputs.resourceId
     roleDefinitionIds: ['/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c']
     metadata: {}
     nonComplianceMessages: []
@@ -217,8 +227,8 @@ module configurePeriodicCheckingAzureVMs 'modules/policyAssignments.bicep' = {
         value: 'Linux'
       }
     }
-    identity: 'SystemAssigned'
-    userAssignedIdentityId: ''
+    identity: 'UserAssigned'
+    userAssignedIdentityId: id_aumpolicy_contributor.outputs.resourceId
     roleDefinitionIds: ['/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c']
     metadata: {}
     nonComplianceMessages: []
@@ -263,8 +273,8 @@ module configurePeriodicCheckingARCServersWindows 'modules/policyAssignments.bic
         value: 'Windows'
       }
     }
-    identity: 'SystemAssigned'
-    userAssignedIdentityId: ''
+    identity: 'UserAssigned'
+    userAssignedIdentityId: id_aumpolicy_contributor.outputs.resourceId
     roleDefinitionIds: ['/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c']
     metadata: {}
     nonComplianceMessages: []
@@ -295,8 +305,8 @@ module configurePeriodicCheckingARCServersLinux 'modules/policyAssignments.bicep
         value: 'Linux'
       }
     }
-    identity: 'SystemAssigned'
-    userAssignedIdentityId: ''
+    identity: 'UserAssigned'
+    userAssignedIdentityId: id_aumpolicy_contributor.outputs.resourceId
     roleDefinitionIds: ['/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c']
     metadata: {}
     nonComplianceMessages: []
@@ -372,7 +382,7 @@ module requireAUMTagPolicyDefinition 'modules/policyDefinition.bicep' = {
               {
                 not: {
                   field: '[concat(\'tags[\', parameters(\'maintenanceEnablingTagName\'), \']\')]'
-                  exists: false
+                  exists: true
                 }
               }
             ]
@@ -404,9 +414,9 @@ module requireAUMTagPolicyAssignment 'modules/policyAssignments.bicep' = {
         value: enableAUMTagName
       }
     }
-    identity: 'SystemAssigned'
-    userAssignedIdentityId: ''
-    roleDefinitionIds: ['/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c']
+    identity: 'UserAssigned'
+    userAssignedIdentityId: id_aumpolicy_contributor.outputs.resourceId
+    roleDefinitionIds: []
     metadata: {}
     nonComplianceMessages: []
     enforcementMode: 'Default'
