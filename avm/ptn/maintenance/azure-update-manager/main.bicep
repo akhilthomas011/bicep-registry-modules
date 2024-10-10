@@ -90,6 +90,11 @@ var aumEnablingTagObject = {
   value: items(aumEnablingTag)[0].value
 }
 
+var osTypes = [
+  'Windows'
+  'Linux'
+]
+
 // MODULES
 
 module id_aumpolicy_contributor 'br/public:avm/res/managed-identity/user-assigned-identity:0.4.0' = {
@@ -176,148 +181,74 @@ module setPrereqPolicyAssignment 'modules/policyAssignments.bicep' = {
     resourceSelectors: []
   }
 }
-
-module configurePeriodicCheckingAzureVMsWin 'modules/policyAssignments.bicep' = {
-  name: 'AUMConfigurePeriodicCheckingAzVMPolicyAssignmentWindows'
-  params: {
-    name: 'AUMConfigurePeriodicCheckingAzVMPolicyAssignmentWindows'
-    displayName: 'Azure Update Manager enabling periodic assessment on Azure VMs based on Tags for Windows'
-    description: 'This policy enables periodic checking for updates on Azure based on Tags of the Azure VMs for Windows'
-    policyDefinitionId: '/providers/Microsoft.Authorization/policyDefinitions/59efceea-0c96-497e-a4a1-4eb2290dac15'
-    parameters: {
-      tagOperator: {
-        value: 'All'
+@batchSize(1)
+module configurePeriodicCheckingAzureVMsWin 'modules/policyAssignments.bicep' = [
+  for osType in osTypes: {
+    name: 'AUMConfigurePeriodicCheckingAzVMPolicyAssignment${osType}'
+    params: {
+      name: 'AUMConfigurePeriodicCheckingAzVMPolicyAssignment${osType}'
+      displayName: 'Azure Update Manager enabling periodic assessment on Azure VMs based on Tags for ${osType}'
+      description: 'This policy enables periodic checking for updates on Azure based on Tags of the Azure VMs for ${osType}'
+      policyDefinitionId: '/providers/Microsoft.Authorization/policyDefinitions/59efceea-0c96-497e-a4a1-4eb2290dac15'
+      parameters: {
+        tagOperator: {
+          value: 'All'
+        }
+        tagValues: {
+          value: aumEnablingTag
+        }
+        osType: {
+          value: osType
+        }
       }
-      tagValues: {
-        value: aumEnablingTag
-      }
-      osType: {
-        value: 'Windows'
-      }
+      identity: 'UserAssigned'
+      userAssignedIdentityId: id_aumpolicy_contributor.outputs.resourceId
+      roleDefinitionIds: ['/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c']
+      metadata: {}
+      nonComplianceMessages: []
+      enforcementMode: 'Default'
+      subscriptionId: subscription().subscriptionId
+      notScopes: []
+      location: location
+      overrides: []
+      resourceSelectors: []
     }
-    identity: 'UserAssigned'
-    userAssignedIdentityId: id_aumpolicy_contributor.outputs.resourceId
-    roleDefinitionIds: ['/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c']
-    metadata: {}
-    nonComplianceMessages: []
-    enforcementMode: 'Default'
-    subscriptionId: subscription().subscriptionId
-    notScopes: []
-    location: location
-    overrides: []
-    resourceSelectors: []
   }
-}
-
-module configurePeriodicCheckingAzureVMs 'modules/policyAssignments.bicep' = {
-  name: 'AUMConfigurePeriodicCheckingAzVMPolicyAssignmentLinux'
-  params: {
-    name: 'AUMConfigurePeriodicCheckingAzVMPolicyAssignmentLinux'
-    displayName: 'Azure Update Manager enabling periodic assessment on Azure VMs based on Tags for Linux'
-    description: 'This policy enables periodic checking for updates on Azure based on Tags of the Azure VMs for Linux'
-    policyDefinitionId: '/providers/Microsoft.Authorization/policyDefinitions/59efceea-0c96-497e-a4a1-4eb2290dac15'
-    parameters: {
-      tagOperator: {
-        value: 'All'
+]
+@batchSize(1)
+module configurePeriodicCheckingARCServersWindows 'modules/policyAssignments.bicep' = [
+  for osType in osTypes: {
+    name: 'AUMConfigurePeriodicCheckingARCVMPolicyAssignment${osType}'
+    params: {
+      name: 'AUMConfigurePeriodicCheckingARCVMPolicyAssignment${osType}'
+      displayName: 'Azure Update Manager enabling periodic assessment on ARC Servers based on Tags for ${osType}'
+      description: 'This policy enables periodic checking for updates on Azure based on Tags of the ARC Servers for ${osType}'
+      policyDefinitionId: '/providers/Microsoft.Authorization/policyDefinitions/bfea026e-043f-4ff4-9d1b-bf301ca7ff46'
+      parameters: {
+        tagOperator: {
+          value: 'All'
+        }
+        tagValues: {
+          value: aumEnablingTag
+        }
+        osType: {
+          value: osType
+        }
       }
-      tagValues: {
-        value: aumEnablingTag
-      }
-      osType: {
-        value: 'Linux'
-      }
+      identity: 'UserAssigned'
+      userAssignedIdentityId: id_aumpolicy_contributor.outputs.resourceId
+      roleDefinitionIds: ['/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c']
+      metadata: {}
+      nonComplianceMessages: []
+      enforcementMode: 'Default'
+      subscriptionId: subscription().subscriptionId
+      notScopes: []
+      location: location
+      overrides: []
+      resourceSelectors: []
     }
-    identity: 'UserAssigned'
-    userAssignedIdentityId: id_aumpolicy_contributor.outputs.resourceId
-    roleDefinitionIds: ['/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c']
-    metadata: {}
-    nonComplianceMessages: []
-    enforcementMode: 'Default'
-    subscriptionId: subscription().subscriptionId
-    notScopes: []
-    location: location
-    overrides: []
-    resourceSelectors: []
   }
-}
-
-resource configurePeriodicCheckingAzureVMsremediateTask 'Microsoft.PolicyInsights/remediations@2021-10-01' = {
-  name: guid('Remediate', configurePeriodicCheckingAzureVMs.name, subscription().id)
-  properties: {
-    failureThreshold: {
-      percentage: 1
-    }
-    resourceCount: 500
-    policyAssignmentId: configurePeriodicCheckingAzureVMs.outputs.resourceId
-    policyDefinitionReferenceId: '/providers/Microsoft.Authorization/policyDefinitions/59efceea-0c96-497e-a4a1-4eb2290dac15'
-    parallelDeployments: 10
-    resourceDiscoveryMode: 'ReEvaluateCompliance'
-  }
-}
-
-module configurePeriodicCheckingARCServersWindows 'modules/policyAssignments.bicep' = {
-  name: 'AUMConfigurePeriodicCheckingARCVMPolicyAssignmentWindows'
-  params: {
-    name: 'AUMConfigurePeriodicCheckingARCVMPolicyAssignmentWindows'
-    displayName: 'Azure Update Manager enabling periodic assessment on ARC Servers based on Tags for Windows'
-    description: 'This policy enables periodic checking for updates on Azure based on Tags of the ARC Servers for Windows'
-    policyDefinitionId: '/providers/Microsoft.Authorization/policyDefinitions/bfea026e-043f-4ff4-9d1b-bf301ca7ff46'
-    parameters: {
-      tagOperator: {
-        value: 'All'
-      }
-      tagValues: {
-        value: aumEnablingTag
-      }
-      osType: {
-        value: 'Windows'
-      }
-    }
-    identity: 'UserAssigned'
-    userAssignedIdentityId: id_aumpolicy_contributor.outputs.resourceId
-    roleDefinitionIds: ['/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c']
-    metadata: {}
-    nonComplianceMessages: []
-    enforcementMode: 'Default'
-    subscriptionId: subscription().subscriptionId
-    notScopes: []
-    location: location
-    overrides: []
-    resourceSelectors: []
-  }
-}
-
-module configurePeriodicCheckingARCServersLinux 'modules/policyAssignments.bicep' = {
-  name: 'AUMConfigurePeriodicCheckingARCVMPolicyAssignmentLinux'
-  params: {
-    name: 'AUMConfigurePeriodicCheckingARCVMPolicyAssignmentWindows'
-    displayName: 'Azure Update Manager enabling periodic assessment on ARC Servers based on Tags for Linux'
-    description: 'This policy enables periodic checking for updates on Azure based on Tags of the ARC Servers for Linuxs'
-    policyDefinitionId: '/providers/Microsoft.Authorization/policyDefinitions/bfea026e-043f-4ff4-9d1b-bf301ca7ff46'
-    parameters: {
-      tagOperator: {
-        value: 'All'
-      }
-      tagValues: {
-        value: aumEnablingTag
-      }
-      osType: {
-        value: 'Linux'
-      }
-    }
-    identity: 'UserAssigned'
-    userAssignedIdentityId: id_aumpolicy_contributor.outputs.resourceId
-    roleDefinitionIds: ['/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c']
-    metadata: {}
-    nonComplianceMessages: []
-    enforcementMode: 'Default'
-    subscriptionId: subscription().subscriptionId
-    notScopes: []
-    location: location
-    overrides: []
-    resourceSelectors: []
-  }
-}
+]
 
 module requireAUMTagPolicyDefinition 'modules/policyDefinition.bicep' = {
   name: 'requireAUMTagPolicyDefinition'
