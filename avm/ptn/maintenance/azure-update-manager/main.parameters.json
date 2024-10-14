@@ -9,32 +9,22 @@
       "value": ""
     },
     "maintenanceConfigurations": {
-      "value": [
-        {
-          "maintenanceConfigName": "string",
-          "maintenanceSchedule": {
-            "startTime": "string",
-            "duration": "string",
-            "maintenanceScope": "string",
-            "maintenanceWindow": {
-              "startTime": "string",
-              "duration": "string"
-            }
-          }
-        },
-        {
-          "maintenanceConfigName": "string",
-          "maintenanceConfigLocation": "string",
-          "maintenanceSchedule": {
-            "startTime": "string",
-            "duration": "string",
-            "maintenanceWindow": {
-              "startTime": "string",
-              "duration": "string"
-            }
-          }
-        }
-      ]
+      "value": {}
+    },
+    "enableAUMTagName": {
+      "value": ""
+    },
+    "enableAUMTagValue": {
+      "value": ""
+    },
+    "maintenanceRingTagName": {
+      "value": ""
+    },
+    "maintenanceRingTagValues": {
+      "value": []
+    },
+    "policyDeploymentManagedIdentityName": {
+      "value": ""
     }
   }
 }
