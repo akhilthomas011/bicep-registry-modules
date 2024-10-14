@@ -6,7 +6,7 @@ metadata category = 'Compute'
 
 targetScope = 'subscription'
 
-// PARAMETERS
+//PARAMETERS
 @description('The location where the resources will be deployed.')
 param location string = deployment().location
 
@@ -66,7 +66,40 @@ param maintenanceConfigurations array = [
     }
   }
 ]
-
+@description('Defines the structure of a maintenance configuration.')
+type maintenanceConfiguration = {
+  maintenanceConfigName: string
+  location: string
+  installPatches: {
+    linuxParameters: {
+      classificationsToInclude: array
+      packageNameMasksToExclude: array
+      packageNameMasksToInclude: array
+    }
+    rebootSetting: string
+    windowsParameters: {
+      classificationsToInclude: array
+      kbNumbersToExclude: array
+      kbNumbersToInclude: array
+    }
+  }
+  lock: object
+  maintenanceWindow: {
+    duration: string
+    expirationDateTime: string?
+    recurEvery: string
+    startDateTime: string
+    timeZone: string
+  }
+  visibility: string
+  maintenanceRing: string
+  resourceFilter: {
+    resourceTypes: array
+    resourceGroups: array
+    osTypes: array
+    locations: array
+  }
+}
 @description('The tag name that will be used to filter the VMs/ARC enabled servers for enabling Azure Update Manager.')
 param enableAUMTagName string = 'aum_maintenance'
 
@@ -78,12 +111,13 @@ param maintenanceRingTagName string = 'aum_maintenance_ring'
 
 @description('The tag values that will be used to filter the VMs/ARC enabled servers for the maintenance ring.')
 param maintenanceRingTagValues array = [
-  'Pilot'
   'Ring-01'
   'Ring-02'
+  'Ring-03'
 ]
 
 @description('The name of the managed identity that will be used to deploy the policies.')
+@maxLength(63)
 param policyDeploymentManagedIdentityName string = 'id-aumpolicy-contributor-001'
 
 var aumEnablingTag = {
