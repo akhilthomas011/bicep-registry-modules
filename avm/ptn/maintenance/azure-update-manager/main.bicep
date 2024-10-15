@@ -14,7 +14,7 @@ param location string = deployment().location
 param maintenanceConfigurationsResourceGroupName string = 'myMaintenanceConfiguration-RG'
 
 @description('The array of maintenance configurations to be created.')
-param maintenanceConfigurations maintenanceConfigurationType = [
+param maintenanceConfigurations array = [
   {
     maintenanceConfigName: 'maintenance_ring-01'
     location: location
@@ -43,26 +43,57 @@ param maintenanceConfigurations maintenanceConfigurationType = [
       expirationDateTime: null
       recurEvery: '1Day'
       startDateTime: '2024-09-19 00:00'
-      timeZone: 'India Standard Time'
+      timeZone: 'UTC'
     }
     visibility: 'Custom'
     maintenanceRing: '01'
     resourceFilter: {
-      resourceTypes: [
-        'Microsoft.Compute/virtualMachines'
-        'Microsoft.hybridcompute/machines'
-      ]
-      resourceGroups: [
-        'rg-dge-access-prod-uaen-01'
-        'maintenanceConfigTest-RG'
-      ]
+      resourceGroups: []
       osTypes: [
         'Windows'
         'Linux'
       ]
-      locations: [
-        'uaenorth'
+      locations: []
+    }
+  }
+  {
+    maintenanceConfigName: 'maintenance_ring-02'
+    location: location
+    installPatches: {
+      linuxParameters: {
+        classificationsToInclude: [
+          'Other'
+        ]
+        packageNameMasksToExclude: []
+        packageNameMasksToInclude: []
+      }
+      rebootSetting: 'IfRequired'
+      windowsParameters: {
+        classificationsToInclude: [
+          'FeaturePack'
+          'ServicePack'
+        ]
+        kbNumbersToExclude: []
+        kbNumbersToInclude: []
+      }
+    }
+    lock: {}
+    maintenanceWindow: {
+      duration: '03:00'
+      expirationDateTime: null
+      recurEvery: 'Week Saturday,Sunday'
+      startDateTime: '2024-09-19 00:00'
+      timeZone: 'UTC'
+    }
+    visibility: 'Custom'
+    maintenanceRing: '02'
+    resourceFilter: {
+      resourceGroups: []
+      osTypes: [
+        'Windows'
+        'Linux'
       ]
+      locations: []
     }
   }
 ]
@@ -76,7 +107,7 @@ param enableAUMTagValue string = 'Enabled'
 param maintenanceRingTagName string = 'aum_maintenance_ring'
 
 @description('The tag values that will be used to filter the VMs/ARC enabled servers for the maintenance ring.')
-param maintenanceRingTagValues array = [
+param maintenanceRingValidTagValues array = [
   'Ring-01'
   'Ring-02'
   'Ring-03'
@@ -98,6 +129,11 @@ var aumEnablingTagObject = {
 var osTypes = [
   'Windows'
   'Linux'
+]
+
+var resourceTypes = [
+  'Microsoft.Compute/virtualMachines'
+  'Microsoft.HybridCompute/machines'
 ]
 
 // MODULES
@@ -143,7 +179,7 @@ module maintenance_configuration_assignments 'modules/configAssignments.bicep' =
       maintenanceConfigName: maintenance_configurations[i].outputs.name
       maintenanceConfigAssignmentName: 'maintenanceConfigAssignment-${maintenanceConfiguration.maintenanceConfigName}'
       filter: {
-        resourceTypes: maintenanceConfiguration.resourceFilter.resourceTypes
+        resourceTypes: resourceTypes
         resourceGroups: maintenanceConfiguration.resourceFilter.resourceGroups
         osTypes: maintenanceConfiguration.resourceFilter.osTypes
         locations: maintenanceConfiguration.resourceFilter.locations
@@ -285,13 +321,13 @@ module requireAUMTagPolicyDefinition 'modules/policyDefinition.bicep' = {
         }
         defaultValue: maintenanceRingTagName
       }
-      maintenanceRingTagValues: {
+      maintenanceRingValidTagValues: {
         type: 'Array'
         metadata: {
           displayName: 'AUM maintenance ring tag allowed values'
           description: 'Values of the tag. For example [01,02,03]'
         }
-        defaultValue: maintenanceRingTagValues
+        defaultValue: maintenanceRingValidTagValues
       }
       maintenanceEnablingTagName: {
         type: 'String'
@@ -322,7 +358,7 @@ module requireAUMTagPolicyDefinition 'modules/policyDefinition.bicep' = {
               {
                 not: {
                   field: '[concat(\'tags[\', parameters(\'maintenanceRingTagName\'), \']\')]'
-                  in: '[parameters(\'maintenanceRingTagValues\')]'
+                  in: '[parameters(\'maintenanceRingValidTagValues\')]'
                 }
               }
               {
@@ -354,8 +390,8 @@ module requireAUMTagPolicyAssignment 'modules/policyAssignments.bicep' = {
       maintenanceRingTagName: {
         value: maintenanceRingTagName
       }
-      maintenanceRingTagValues: {
-        value: maintenanceRingTagValues
+      maintenanceRingValidTagValues: {
+        value: maintenanceRingValidTagValues
       }
       maintenanceEnablingTagName: {
         value: enableAUMTagName
@@ -384,42 +420,69 @@ output maintenanceConfigurationIds array = [
 
 //User Defined Types
 @description('Defines the structure of a maintenance configuration.')
-type maintenanceConfigurationType = [
-  {
-    maintenanceConfigName: string
-    location: string
-    installPatches: {
-      linuxParameters: {
-        classificationsToInclude: array
-        packageNameMasksToExclude: array
-        packageNameMasksToInclude: array
-      }
-      rebootSetting: string
-      windowsParameters: {
-        classificationsToInclude: array
-        kbNumbersToExclude: array
-        kbNumbersToInclude: array
-      }
+type maintenanceConfigurationType = {
+  @description('The name of the maintenance configuration.')
+  maintenanceConfigName: string
+  @description('The location where the maintenance configuration will be created.')
+  location: string
+  @description('The patch installation settings for the maintenance configuration.')
+  installPatches: {
+    @description('The patch installation settings for Linux.')
+    linuxParameters: {
+      @description('The classifications of patches to include for Linux.')
+      classificationsToInclude: array?
+      @description('The package name masks to exclude for Linux.')
+      packageNameMasksToExclude: array?
+      @description('The package name masks to include for Linux.')
+      packageNameMasksToInclude: array?
     }
-    lock: object
-    maintenanceWindow: {
-      duration: string
-      expirationDateTime: string?
-      recurEvery: string
-      startDateTime: string
-      timeZone: string
+    @description('The reboot setting for the maintenance configuration.')
+    rebootSetting: string
+    @description('The patch installation settings for Windows.')
+    windowsParameters: {
+      @description('The classifications of patches to include for Windows.')
+      classificationsToInclude: array?
+      @description('The KB numbers to exclude for Windows.')
+      kbNumbersToExclude: array?
+      @description('The KB numbers to include for Windows.')
+      kbNumbersToInclude: array?
     }
-    visibility: visibilityType
-    maintenanceRing: string
-    resourceFilter: {
-      resourceTypes: array
-      resourceGroups: array
-      osTypes: array
-      locations: array
-    }
-    tags: object?
-    roleAssignments: array?
   }
-]
+  @description('The lock settings for the maintenance configuration.')
+  lock: object
+  @description('The maintenance window settings for the maintenance configuration.')
+  maintenanceWindow: {
+    @description('The duration of the maintenance window.')
+    duration: string
+    @description('The expiration date and time of the maintenance window.')
+    expirationDateTime: string?
+    @description('The recurrence interval of the maintenance window.')
+    recurEvery: string
+    @description('The start date and time of the maintenance window.')
+    startDateTime: string
+    @description('''Name of the timezone.
+    List of timezones can be obtained by executing `[System.TimeZoneInfo]::GetSystemTimeZones()` in PowerShell.
+    Example: `Pacific Standard Time`, `UTC`, `W. Europe Standard Time`, `Korea Standard Time`, `Cen. Australia Standard Time`.
+    ''')
+    timeZone: string
+  }
+  @description('The visibility of the maintenance configuration.')
+  visibility: visibilityType
+  @description('The maintenance ring associated with the maintenance configuration.')
+  maintenanceRing: string
+  @description('The resource filter settings for the maintenance configuration.')
+  resourceFilter: {
+    @description('The resource groups to include in the maintenance configuration.')
+    resourceGroups: array?
+    @description('The OS types to include in the maintenance configuration.')
+    osTypes: array?
+    @description('The locations to include in the maintenance configuration.')
+    locations: array?
+  }
+  @description('The tags to apply to the maintenance configuration.')
+  tags: object?
+  @description('The role assignments for the maintenance configuration.')
+  roleAssignments: array?
+}[]
 @description('Defines the structure of visibility.')
 type visibilityType = '' | 'Custom' | 'Public' | null
