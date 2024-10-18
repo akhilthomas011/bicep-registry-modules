@@ -10,6 +10,13 @@ targetScope = 'subscription'
 @description('The location where the resources will be deployed.')
 param location string = deployment().location
 
+@description('Choose whether to choose an existing Resource Group to deploy Maintenance Configurations and related resources or create a new one.')
+@allowed([
+  'new'
+  'existing'
+])
+param maintenanceConfigurationsResourceGroupNeworExisting string = 'new'
+
 @description('The name of the resource group where the maintenance configurations will be created.')
 param maintenanceConfigurationsResourceGroupName string = 'myMaintenanceConfiguration-RG'
 
@@ -46,7 +53,6 @@ param maintenanceConfigurations array = [
       timeZone: 'UTC'
     }
     visibility: 'Custom'
-    maintenanceRing: '01'
     resourceFilter: {
       resourceGroups: []
       osTypes: [
@@ -86,7 +92,6 @@ param maintenanceConfigurations array = [
       timeZone: 'UTC'
     }
     visibility: 'Custom'
-    maintenanceRing: '02'
     resourceFilter: {
       resourceGroups: []
       osTypes: [
@@ -97,6 +102,7 @@ param maintenanceConfigurations array = [
     }
   }
 ]
+
 @description('The tag name that will be used to filter the VMs/ARC enabled servers for enabling Azure Update Manager.')
 param enableAUMTagName string = 'aum_maintenance'
 
@@ -104,18 +110,20 @@ param enableAUMTagName string = 'aum_maintenance'
 param enableAUMTagValue string = 'Enabled'
 
 @description('The tag name that will be used to filter the VMs/ARC enabled servers for the maintenance ring.')
-param maintenanceRingTagName string = 'aum_maintenance_ring'
-
-@description('The tag values that will be used to filter the VMs/ARC enabled servers for the maintenance ring.')
-param maintenanceRingValidTagValues array = [
-  'Ring-01'
-  'Ring-02'
-  'Ring-03'
-]
+param maintenanceConfigEnrollmentTagName string = 'aum_maintenance_config'
 
 @description('The name of the managed identity that will be used to deploy the policies.')
 @maxLength(63)
 param policyDeploymentManagedIdentityName string = 'id-aumpolicy-contributor-001'
+
+@sys.description('Optional. Enable/Disable usage telemetry for module.')
+param enableTelemetry bool = true
+
+//VARIABLES
+
+var maintenanceConfigNames = [
+  for (maintenanceConfiguration, i) in maintenanceConfigurations: maintenanceConfiguration.maintenanceConfigName
+]
 
 var aumEnablingTag = {
   '${enableAUMTagName}': enableAUMTagValue
@@ -138,6 +146,37 @@ var resourceTypes = [
 
 // MODULES
 
+#disable-next-line no-deployments-resources
+resource avmTelemetry 'Microsoft.Resources/deployments@2024-03-01' = if (enableTelemetry) {
+  name: '46d3xbcp.ptn.maintenance-azureupdatemanager.${replace('-..--..-', '.', '-')}.${substring(uniqueString(deployment().name, location), 0, 4)}'
+  location: location
+  properties: {
+    mode: 'Incremental'
+    template: {
+      '$schema': 'https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#'
+      contentVersion: '1.0.0.0'
+      resources: []
+      outputs: {
+        telemetry: {
+          type: 'String'
+          value: 'For more information, see https://aka.ms/avm/TelemetryInfo'
+        }
+      }
+    }
+  }
+}
+
+resource existingResourceGroup 'Microsoft.Resources/resourceGroups@2021-04-01' existing = if (maintenanceConfigurationsResourceGroupNeworExisting == 'existing') {
+  name: maintenanceConfigurationsResourceGroupName
+}
+@description('Creates a resource group for Azure Update Manager maintenance configurations.')
+module maintenanceConfig_rg 'br/public:avm/res/resources/resource-group:0.4.0' = if (maintenanceConfigurationsResourceGroupNeworExisting == 'new') {
+  name: 'maintenanceConfig_rg'
+  params: {
+    name: maintenanceConfigurationsResourceGroupName
+    location: location
+  }
+}
 @description('Creates a user-assigned managed identity for policy deployment.')
 module id_aumpolicy_contributor 'br/public:avm/res/managed-identity/user-assigned-identity:0.4.0' = {
   name: 'userAssignedManagedIdentity'
@@ -145,7 +184,12 @@ module id_aumpolicy_contributor 'br/public:avm/res/managed-identity/user-assigne
   params: {
     name: policyDeploymentManagedIdentityName
     location: location
+    enableTelemetry: enableTelemetry
   }
+  dependsOn: [
+    maintenanceConfig_rg
+    existingResourceGroup
+  ]
 }
 
 @description('Creates maintenance configurations based on the provided parameters.')
@@ -166,6 +210,7 @@ module maintenance_configurations 'br/public:avm/res/maintenance/maintenance-con
         InGuestPatchMode: 'User'
       }
       maintenanceScope: 'InGuestPatch'
+      enableTelemetry: enableTelemetry
     }
   }
 ]
@@ -186,7 +231,7 @@ module maintenance_configuration_assignments 'modules/configAssignments.bicep' =
         tagsettings: {
           filterOperator: 'All'
           tags: {
-            '${maintenanceRingTagName}': [maintenanceConfiguration.maintenanceRing]
+            '${maintenanceConfigEnrollmentTagName}': [maintenanceConfiguration.maintenanceConfigName]
             '${enableAUMTagName}': [enableAUMTagValue]
           }
         }
@@ -313,27 +358,27 @@ module requireAUMTagPolicyDefinition 'modules/policyDefinition.bicep' = {
       category: 'Tags'
     }
     parameters: {
-      maintenanceRingTagName: {
+      maintenanceConfigEnrollmentTagName: {
         type: 'String'
         metadata: {
-          displayName: 'AUM maintenance ring tag name'
-          description: 'Name of the AUM maintenance ring tag. For example \'aum_maintenance_ring\''
+          displayName: 'Tag name to specify the corresponding Maintenance Configuration'
+          description: 'Name of the Tag to specify the Maintenance Configuration to which the resource belongs. For example \'aum_maintenance_ring\''
         }
-        defaultValue: maintenanceRingTagName
+        defaultValue: maintenanceConfigEnrollmentTagName
       }
-      maintenanceRingValidTagValues: {
+      maintenanceConfigNames: {
         type: 'Array'
         metadata: {
-          displayName: 'AUM maintenance ring tag allowed values'
-          description: 'Values of the tag. For example [01,02,03]'
+          displayName: 'Available AUM Maintenance Configurations'
+          description: 'Available AUM Maintenance Configuration names. For example [Ring-01,Ring-02]'
         }
-        defaultValue: maintenanceRingValidTagValues
+        defaultValue: maintenanceConfigNames
       }
       maintenanceEnablingTagName: {
         type: 'String'
         metadata: {
-          displayName: 'AUM maintenance enabling tag name'
-          description: 'Name of the AUM maintenance enabling tag. For example \'aum_maintenance\''
+          displayName: 'Tag name to enable AUM maintenance'
+          description: 'Name of the tag that enables AUM maintenance. For example \'aum_maintenance\''
         }
         defaultValue: enableAUMTagName
       }
@@ -357,8 +402,8 @@ module requireAUMTagPolicyDefinition 'modules/policyDefinition.bicep' = {
             anyOf: [
               {
                 not: {
-                  field: '[concat(\'tags[\', parameters(\'maintenanceRingTagName\'), \']\')]'
-                  in: '[parameters(\'maintenanceRingValidTagValues\')]'
+                  field: '[concat(\'tags[\', parameters(\'maintenanceConfigEnrollmentTagName\'), \']\')]'
+                  in: '[parameters(\'maintenanceConfigNames\')]'
                 }
               }
               {
@@ -387,11 +432,11 @@ module requireAUMTagPolicyAssignment 'modules/policyAssignments.bicep' = {
     description: 'Enforces existence of a tag on Azure VMs/ARC enabled servers.'
     policyDefinitionId: requireAUMTagPolicyDefinition.outputs.resourceId
     parameters: {
-      maintenanceRingTagName: {
-        value: maintenanceRingTagName
+      maintenanceConfigEnrollmentTagName: {
+        value: maintenanceConfigEnrollmentTagName
       }
-      maintenanceRingValidTagValues: {
-        value: maintenanceRingValidTagValues
+      maintenanceConfigNames: {
+        value: maintenanceConfigNames
       }
       maintenanceEnablingTagName: {
         value: enableAUMTagName
@@ -401,7 +446,11 @@ module requireAUMTagPolicyAssignment 'modules/policyAssignments.bicep' = {
     userAssignedIdentityId: id_aumpolicy_contributor.outputs.resourceId
     roleDefinitionIds: []
     metadata: {}
-    nonComplianceMessages: []
+    nonComplianceMessages: [
+      {
+        message: 'Please ensure that the following tags are applied to the VMs/ARC Servers - ${enableAUMTagName}: [Enabled/Disabled], ${maintenanceConfigEnrollmentTagName}: ${replace(replace(string(maintenanceConfigNames),'"',''),',','/')} '
+      }
+    ]
     enforcementMode: 'Default'
     subscriptionId: subscription().subscriptionId
     notScopes: []
@@ -468,8 +517,6 @@ type maintenanceConfigurationType = {
   }
   @description('The visibility of the maintenance configuration.')
   visibility: visibilityType
-  @description('The maintenance ring associated with the maintenance configuration.')
-  maintenanceRing: string
   @description('The resource filter settings for the maintenance configuration.')
   resourceFilter: {
     @description('The resource groups to include in the maintenance configuration.')

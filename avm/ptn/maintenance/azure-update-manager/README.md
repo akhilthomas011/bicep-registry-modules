@@ -44,21 +44,9 @@ This instance deploys the module with the minimum set of required parameters.
 <summary>via Bicep module</summary>
 
 ```bicep
-module subVending 'br/public:avm/ptn/lz/sub-vending:<version>' = {
-  name: 'subVendingDeployment'
+module updateManagerConfig 'br/public:avm/ptn/maintenance/azure-update-manager:<version>' = {
+  name: 'updateManagerConfigDeployment'
   params: {
-    resourceProviders: {}
-    subscriptionAliasEnabled: true
-    subscriptionAliasName: '<subscriptionAliasName>'
-    subscriptionBillingScope: '<subscriptionBillingScope>'
-    subscriptionDisplayName: '<subscriptionDisplayName>'
-    subscriptionManagementGroupAssociationEnabled: true
-    subscriptionManagementGroupId: 'bicep-lz-vending-automation-child'
-    subscriptionTags: {
-      namePrefix: '<namePrefix>'
-      serviceShort: '<serviceShort>'
-    }
-    subscriptionWorkload: 'Production'
   }
 }
 ```
@@ -75,35 +63,123 @@ module subVending 'br/public:avm/ptn/lz/sub-vending:<version>' = {
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "resourceProviders": {
-      "value": {}
-    },
-    "subscriptionAliasEnabled": {
-      "value": true
-    },
-    "subscriptionAliasName": {
-      "value": "<subscriptionAliasName>"
-    },
-    "subscriptionBillingScope": {
-      "value": "<subscriptionBillingScope>"
-    },
-    "subscriptionDisplayName": {
-      "value": "<subscriptionDisplayName>"
-    },
-    "subscriptionManagementGroupAssociationEnabled": {
-      "value": true
-    },
-    "subscriptionManagementGroupId": {
-      "value": "bicep-lz-vending-automation-child"
-    },
-    "subscriptionTags": {
-      "value": {
-        "namePrefix": "<namePrefix>",
-        "serviceShort": "<serviceShort>"
+  }
+}
+```
+
+</details>
+<p>
+
+<details>
+
+<summary>via Bicep parameters file</summary>
+
+```bicep-params
+using 'br/public:avm/ptn/maintenance/azure-update-manager:<version>'
+
+
+```
+
+</details>
+<p>
+
+### Example 2: _Using large parameter set_
+
+This instance deploys the module with most of its features enabled.
+
+
+<details>
+
+<summary>via Bicep module</summary>
+
+```bicep
+module updateManagerConfig 'br/public:avm/ptn/maintenance/azure-update-manager:<version>' = {
+  name: 'updateManagerConfigDeployment'
+  params: {
+    location: '<location>'
+    maintenanceConfigurationsResourceGroupNeworExisting: 'new'
+    maintenanceConfigurationsResourceGroupName: '<maintenanceConfigurationsResourceGroupName>'
+    maintenanceConfigurations:[
+      {
+        maintenanceConfigName: 'maintenance_ring-01'
+        location: location
+        installPatches: {
+          linuxParameters: {
+            classificationsToInclude:'<classificationsToInclude>'
+            packageNameMasksToExclude: '<packageNameMasksToExclude>'
+            packageNameMasksToInclude: '<packageNameMasksToInclude>'
+          }
+          rebootSetting: 'IfRequired'
+          windowsParameters: {
+            classificationsToInclude: '<classificationsToInclude>'
+            kbNumbersToExclude: '<kbNumbersToExclude>'
+            kbNumbersToInclude: '<kbNumbersToInclude>'
+          }
+        }
+        lock: {
+          kind: 'CanNotDelete'
+          name: 'myCustomLockName'
+        }
+        maintenanceWindow: {
+          duration: '03:00'
+          expirationDateTime: '9999-12-31 23:59:59'
+          recurEvery: '1Day'
+          startDateTime: '2022-12-31 13:00'
+          timeZone: 'UTC'
+        }
+        visibility: 'Custom'
+        resourceFilter: {
+          resourceGroups: '<resourceGroups>'
+          osTypes: '<osTypes>'
+          locations: '<locations>'
+        }
       }
+    ]
+    enableAUMTagName:'<enableAUMTagName>'
+    enableAUMTagValue: '<enableAUMTagValue>'
+    maintenanceConfigEnrollmentTagName: '<maintenanceConfigEnrollmentTagName>'
+    policyDeploymentManagedIdentityName: '<policyDeploymentManagedIdentityName>'
+    enableTelemetry: '<enableTelemetry>'
+  }
+}
+```
+
+</details>
+<p>
+
+<details>
+
+<summary>via JSON parameters file</summary>
+
+```json
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "<location>"
     },
-    "subscriptionWorkload": {
-      "value": "Production"
+    "maintenanceConfigurationsResourceGroupNeworExisting": "new",
+    "maintenanceConfigurationsResourceGroupName": {
+      "value": ""
+    },
+    "maintenanceConfigurations": {
+      "value": []
+    },
+    "enableAUMTagName": {
+      "value": ""
+    },
+    "enableAUMTagValue": {
+      "value": ""
+    },
+    "maintenanceConfigEnrollmentTagName": {
+      "value": ""
+    },
+    "policyDeploymentManagedIdentityName": {
+      "value": ""
+    },
+    "enableTelemetry": {
+      "value": false
     }
   }
 }
@@ -112,5 +188,22 @@ module subVending 'br/public:avm/ptn/lz/sub-vending:<version>' = {
 </details>
 <p>
 
+<details>
 
+<summary>via Bicep parameters file</summary>
 
+```bicep-params
+using 'br/public:avm/ptn/network/private-link-private-dns-zones:<version>'
+
+param location = '<location>'
+param privateLinkPrivateDnsZones = [
+  'testpdnszone1.int'
+  'testpdnszone2.local'
+]
+param virtualNetworkResourceIdsToLinkTo = [
+  '<vnetResourceId>'
+]
+```
+
+</details>
+<p>
