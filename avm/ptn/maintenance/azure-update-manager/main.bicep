@@ -18,7 +18,7 @@ param location string = deployment().location
 param maintenanceConfigurationsResourceGroupNeworExisting string = 'new'
 
 @description('The name of the resource group where the maintenance configurations will be created.')
-param maintenanceConfigurationsResourceGroupName string = 'myMaintenanceConfiguration-RG'
+param maintenanceConfigurationsResourceGroupName string = 'myMaintenanceConfigurations-RG'
 
 @description('The array of maintenance configurations to be created.')
 param maintenanceConfigurations array = [
@@ -85,7 +85,7 @@ param maintenanceConfigurations array = [
     }
     lock: {}
     maintenanceWindow: {
-      duration: '03:00'
+      duration: '05:00'
       expirationDateTime: null
       recurEvery: 'Week Saturday,Sunday'
       startDateTime: '2024-09-19 00:00'
@@ -109,7 +109,7 @@ param enableAUMTagName string = 'aum_maintenance'
 @description('The tag value that will be used to filter the VMs/ARC enabled servers for enabling Azure Update Manager.')
 param enableAUMTagValue string = 'Enabled'
 
-@description('The tag name that will be used to filter the VMs/ARC enabled servers for the maintenance ring.')
+@description('The tag name that will be used to filter the VMs/ARC enabled servers to assign to a maintenance configuration.')
 param maintenanceConfigEnrollmentTagName string = 'aum_maintenance_config'
 
 @description('The name of the managed identity that will be used to deploy the policies.')
